@@ -49,6 +49,8 @@ function main() {
     # If you're using the Mintty terminal emulator in Cygwin, may need to set the
     # "Backspace sends ^H" setting in "Keys" section of the Mintty options
     # (see https://github.com/sbt/sbt/issues/562).
+    #
+    #/root/training/spark-2.2.1-bin-hadoop2.7/bin/spark-submit --class org.apache.spark.repl.Main --name Spark shell
     stty -icanon min 1 -echo > /dev/null 2>&1
     export SPARK_SUBMIT_OPTS="$SPARK_SUBMIT_OPTS -Djline.terminal=unix"
     "${SPARK_HOME}"/bin/spark-submit --class org.apache.spark.repl.Main --name "Spark shell" "$@"

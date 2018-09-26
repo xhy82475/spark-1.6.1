@@ -26,5 +26,5 @@ fi
 export PYTHONHASHSEED=0
 
 # 执行spark-class shell脚本
-
+# /root/training/spark-2.2.1-bin-hadoop2.7/bin/spark-class org.apache.spark.deploy.SparkSubmit --class org.apache.spark.repl.Main --name Spark shell
 exec "${SPARK_HOME}"/bin/spark-class org.apache.spark.deploy.SparkSubmit "$@"

@@ -90,4 +90,7 @@ while IFS= read -d '' -r ARG; do
   # 执行类 org.apache.spark.launcher.Main构建CMD命令
 done < <("$RUNNER" -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@"
 # 最终执行 org.apache.spark.deploy.SparkSubmit
+
+
+#/root/training/jdk1.8.0_144/bin/java -cp /root/training/spark-2.2.1-bin-hadoop2.7/conf/:/root/training/spark-2.2.1-bin-hadoop2.7/jars/*:/root/training/hadoop-2.7.6/etc/hadoop/ -Dscala.usejavacp=true -Xmx1g org.apache.spark.deploy.SparkSubmit --class org.apache.spark.repl.Main --name Spark shell spark-shell
 exec "${CMD[@]}"

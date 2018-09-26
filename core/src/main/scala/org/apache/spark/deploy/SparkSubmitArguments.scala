@@ -34,7 +34,7 @@ import org.apache.spark.util.Utils
 /**
  * Parses and encapsulates arguments from the spark-submit script.
  * The env argument is used for testing.
-  * args : spark-submit脚本提交的配置参数
+  * args : spark-submit脚本提交的配置参数 spark-shell: --class org.apache.spark.repl.Main --name Spark shell spark-shell
  */
 private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, String] = sys.env)
   extends SparkSubmitArgumentsParser {
@@ -53,7 +53,7 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
   var files: String = null
   var archives: String = null
   var mainClass: String = null // 用户主程序类名
-  var primaryResource: String = null // 用户程序jar包
+  var primaryResource: String = null // 应用程序资源jar
   var name: String = null // 应用程序名称
   var childArgs: ArrayBuffer[String] = new ArrayBuffer[String]() // 保存spark-submit提交的剩余的命令参数
   var jars: String = null

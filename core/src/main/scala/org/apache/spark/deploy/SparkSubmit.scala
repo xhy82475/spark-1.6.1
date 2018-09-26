@@ -111,6 +111,7 @@ object SparkSubmit {
   }
   // scalastyle:on println
 
+  // spark-shell  args: --class org.apache.spark.repl.Main --name Spark shell spark-shell
   def main(args: Array[String]): Unit = {
     // 解析封装spark-submit脚本中的参数(env参数用于测试)
     // 如: spark-submit --class demo.ShuffleDe --master yarn-client --num-executors 1

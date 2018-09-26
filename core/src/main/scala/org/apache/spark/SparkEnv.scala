@@ -246,9 +246,11 @@ object SparkEnv extends Logging {
       assert(listenerBus != null, "Attempted to create driver SparkEnv with null listener bus!")
     }
 
+    // 创建安全管理器
     val securityManager = new SecurityManager(conf)
 
     // Create the ActorSystem for Akka and get the port it binds to.
+    // 创建基于Akka的分布式消息系统
     val actorSystemName = if (isDriver) driverActorSystemName else executorActorSystemName
     val rpcEnv = RpcEnv.create(actorSystemName, hostname, port, conf, securityManager,
       clientMode = !isDriver)
@@ -325,7 +327,8 @@ object SparkEnv extends Logging {
       }
     }
 
-    val mapOutputTracker = if (isDriver) {
+    // 创建Map任务输出跟踪器
+  val mapOutputTracker = if (isDriver) {
       new MapOutputTrackerMaster(conf)
     } else {
       new MapOutputTrackerWorker(conf)
@@ -344,6 +347,7 @@ object SparkEnv extends Logging {
       "tungsten-sort" -> "org.apache.spark.shuffle.sort.SortShuffleManager")
     val shuffleMgrName = conf.get("spark.shuffle.manager", "sort")
     val shuffleMgrClass = shortShuffleMgrNames.getOrElse(shuffleMgrName.toLowerCase, shuffleMgrName)
+    // 实例化shuffleManager
     val shuffleManager = instantiateClass[ShuffleManager](shuffleMgrClass)
 
     val useLegacyMemoryManager = conf.getBoolean("spark.memory.useLegacyMode", false)
@@ -354,22 +358,28 @@ object SparkEnv extends Logging {
         UnifiedMemoryManager(conf, numUsableCores)
       }
 
+    // 创建块传输服务blockTransferService
     val blockTransferService = new NettyBlockTransferService(conf, securityManager, numUsableCores)
 
+    // 创建blockManagerMaster,位于driver端
     val blockManagerMaster = new BlockManagerMaster(registerOrLookupEndpoint(
       BlockManagerMaster.DRIVER_ENDPOINT_NAME,
       new BlockManagerMasterEndpoint(rpcEnv, isLocal, conf, listenerBus)),
       conf, isDriver)
 
     // NB: blockManager is not valid until initialize() is called later.
+    // 创建块管理器
     val blockManager = new BlockManager(executorId, rpcEnv, blockManagerMaster,
       serializer, conf, memoryManager, mapOutputTracker, shuffleManager,
       blockTransferService, securityManager, numUsableCores)
 
+    // 创建广播管理器
     val broadcastManager = new BroadcastManager(isDriver, conf, securityManager)
 
+    // 创建缓存管理器
     val cacheManager = new CacheManager(blockManager)
 
+    // 创建测量系统
     val metricsSystem = if (isDriver) {
       // Don't start metrics system right now for Driver.
       // We need to wait for the task scheduler to give us an app ID.

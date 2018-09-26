@@ -39,11 +39,13 @@ import org.apache.spark.util.Utils
  *
  * All setter methods in this class support chaining. For example, you can write
  * `new SparkConf().setMaster("local").setAppName("My app")`.
- *
+ * 支持链式
  * Note that once a SparkConf object is passed to Spark, it is cloned and can no longer be modified
  * by the user. Spark does not support modifying the configuration at runtime.
+ * 一旦初始化,配置不可更改!
  *
  * @param loadDefaults whether to also load values from Java system properties
+  *                     加载Java系统配置参数
  */
 class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
 
@@ -52,10 +54,12 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
   /** Create a SparkConf that loads defaults from system properties and the classpath */
   def this() = this(true)
 
+  // 利用ConcurrentHashMap进行存储,线程安全
   private val settings = new ConcurrentHashMap[String, String]()
 
   if (loadDefaults) {
     // Load any spark.* system properties
+    // 加载任何以spark.*开头的系统属性
     for ((key, value) <- Utils.getSystemProperties if key.startsWith("spark.")) {
       set(key, value)
     }
@@ -392,7 +396,7 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
     val sparkExecutorInstances = "spark.executor.instances"
 
     // Used by Yarn in 1.1 and before
-    sys.props.get("spark.driver.libraryPath").foreach { value =>
+    sys.props.get("spark.spark.app.name.libraryPath").foreach { value =>
       val warning =
         s"""
           |spark.driver.libraryPath was detected (set to '$value').

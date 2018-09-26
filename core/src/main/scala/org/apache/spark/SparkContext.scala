@@ -79,15 +79,18 @@ import org.apache.spark.util._
 class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationClient {
 
   // The call site where this SparkContext was constructed.
+  // 主要存储了最靠近栈顶的用户类以及最靠近栈底的scala或者核心类
   private val creationSite: CallSite = Utils.getCallSite()
 
   // If true, log warnings instead of throwing exceptions when multiple SparkContexts are active
+  // 控制sparkcontext实例个数(默认一个)
   private val allowMultipleContexts: Boolean =
     config.getBoolean("spark.driver.allowMultipleContexts", false)
 
   // In order to prevent multiple SparkContexts from being active at the same time, mark this
   // context as having started construction.
   // NOTE: this must be placed at the beginning of the SparkContext constructor.
+  // 主要用来确保实例的唯一性,确保同一时间只一个sparkcontext处于正在构建中
   SparkContext.markPartiallyConstructed(this, allowMultipleContexts)
 
   val startTime = System.currentTimeMillis()
@@ -217,7 +220,8 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
    | constructor is still running is safe.                                                 |
    * ------------------------------------------------------------------------------------- */
 
-  private var _conf: SparkConf = _
+  // 私有变量,保持上下文的内部状态,可变,外部不能进行访问,对变量提前初始化,可使context在构建上下文过程中调用stop也会是安全的
+  private var _conf: SparkConf = _  // 配置文件
   private var _eventLogDir: Option[URI] = None
   private var _eventLogCodec: Option[String] = None
   private var _env: SparkEnv = _
@@ -244,7 +248,7 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
 
   /* ------------------------------------------------------------------------------------- *
    | Accessors and public fields. These provide access to the internal state of the        |
-   | context.                                                                              |
+   | context.                                                                            |
    * ------------------------------------------------------------------------------------- */
 
   private[spark] def conf: SparkConf = _conf
@@ -266,6 +270,7 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
 
   // Generate the random name for a temp folder in external block store.
   // Add a timestamp as the suffix here to make it more safe
+  // 随机生成临时目录
   val externalBlockStoreFolderName = "spark-" + randomUUID.toString()
   @deprecated("Use externalBlockStoreFolderName instead.", "1.4.0")
   val tachyonFolderName = externalBlockStoreFolderName
@@ -278,6 +283,7 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
   def isStopped: Boolean = stopped.get()
 
   // An asynchronous listener bus for Spark events
+  // 异步事件监听模型
   private[spark] val listenerBus = new LiveListenerBus
 
   // This function allows components created by SparkEnv to be mocked in unit tests:
@@ -394,9 +400,11 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
   }
 
   try {
+    // 对sparkconf进行复制,并进行校验
     _conf = config.clone()
     _conf.validateSettings()
 
+    // 必须设置spark.master以及spark.app.name
     if (!_conf.contains("spark.master")) {
       throw new SparkException("A master URL must be set in your configuration")
     }
@@ -406,12 +414,14 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
 
     // System property spark.yarn.app.id must be set if user code ran by AM on a YARN cluster
     // yarn-standalone is deprecated, but still supported
+    // spark.yarn.app.id属性是啥???
     if ((master == "yarn-cluster" || master == "yarn-standalone") &&
         !_conf.contains("spark.yarn.app.id")) {
       throw new SparkException("Detected yarn-cluster mode, but isn't running on a cluster. " +
         "Deployment to YARN is not supported directly by SparkContext. Please use spark-submit.")
     }
 
+    // 配置属性打印配置
     if (_conf.getBoolean("spark.logConf", false)) {
       logInfo("Spark configuration:\n" + _conf.toDebugString)
     }
@@ -426,6 +436,7 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
     _files = _conf.getOption("spark.files").map(_.split(",")).map(_.filter(_.size != 0))
       .toSeq.flatten
 
+    // 事件日志目录
     _eventLogDir =
       if (isEventLogEnabled) {
         val unresolvedDir = conf.get("spark.eventLog.dir", EventLoggingListener.DEFAULT_LOG_DIR)
@@ -435,6 +446,7 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
         None
       }
 
+    // 事件日志压缩
     _eventLogCodec = {
       val compress = _conf.getBoolean("spark.eventLog.compress", false)
       if (compress && isEventLogEnabled) {
@@ -450,13 +462,17 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
 
     // "_jobProgressListener" should be set up before creating SparkEnv because when creating
     // "SparkEnv", some messages will be posted to "listenerBus" and we should not miss them.
+    // 初始化_jobProgressListener
     _jobProgressListener = new JobProgressListener(_conf)
     listenerBus.addListener(jobProgressListener)
 
     // Create the Spark execution environment (cache, map output tracker, etc)
+    // *****创建spark执行环境(缓存,map输出)*****
+    // _conf:配置文件,isLocal:是否为单机模式,listenerBus:采用监听器模式维护各类事件的处理
     _env = createSparkEnv(_conf, isLocal, listenerBus)
     SparkEnv.set(_env)
 
+    // 创建metadataCleaner,清理pesistsRDD中过时的内容
     _metadataCleaner = new MetadataCleaner(MetadataCleanerType.SPARK_CONTEXT, this.cleanup, _conf)
 
     _statusTracker = new SparkStatusTracker(this)
@@ -468,6 +484,7 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
         None
       }
 
+    // sparkui服务
     _ui =
       if (conf.getBoolean("spark.ui.enabled", true)) {
         Some(SparkUI.createLiveUI(this, _conf, listenerBus, _jobProgressListener,
@@ -519,9 +536,11 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
       HeartbeatReceiver.ENDPOINT_NAME, new HeartbeatReceiver(this))
 
     // Create and start the scheduler
+    // 创建任务调度器
     val (sched, ts) = SparkContext.createTaskScheduler(this, master)
     _schedulerBackend = sched
     _taskScheduler = ts
+    // 创建启动DAGScheduler
     _dagScheduler = new DAGScheduler(this)
     _heartbeatReceiver.ask[Boolean](TaskSchedulerIsSet)
 

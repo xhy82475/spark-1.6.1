@@ -50,6 +50,7 @@ class Main {
    */
   public static void main(String[] argsArray) throws Exception {
     // 检查参数变量
+    // spark-shell argsArray: org.apache.spark.deploy.SparkSubmit --class org.apache.spark.repl.Main --name Spark shell
     checkArgument(argsArray.length > 0, "Not enough arguments: missing class name.");
 
     /**
@@ -59,10 +60,12 @@ class Main {
      * --name "Spark shell" --master spark://hdp115:7077
      */
     List<String> args = new ArrayList<String>(Arrays.asList(argsArray));
-    String className = args.remove(0);
+    String className = args.remove(0); // org.apache.spark.deploy.SparkSubmit
 
     // 可以通过设定环境变量 SPARK_PRINT_LAUNCH_COMMAND为任意值(不能为空)来打印
+    // export SPARK_PRINT_LAUNCH_COMMAND=true
     boolean printLaunchCommand = !isEmpty(System.getenv("SPARK_PRINT_LAUNCH_COMMAND"));
+    // args: --class org.apache.spark.repl.Main --name Spark shell
     AbstractCommandBuilder builder; // spark命令构建器抽象类,提供了一些通用功能
     // spark-submit提交
     if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
